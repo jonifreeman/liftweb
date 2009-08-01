@@ -17,7 +17,6 @@ package net.liftweb.http
 
 import _root_.scala.actors.Actor
 import _root_.scala.actors.Actor._
-import _root_.javax.servlet.http.{HttpSessionBindingListener, HttpSessionBindingEvent, HttpSession}
 import _root_.scala.collection.mutable.{HashMap, ArrayBuffer, ListBuffer}
 import _root_.scala.xml.{NodeSeq, Unparsed, Text}
 import _root_.net.liftweb.util._
@@ -28,19 +27,19 @@ import _root_.net.liftweb.builtin.snippet._
 import _root_.java.lang.reflect.{Method, Modifier, InvocationTargetException}
 import _root_.scala.xml.{Node, NodeSeq, Elem, MetaData, Null, UnprefixedAttribute, PrefixedAttribute, XML, Comment, Group}
 import _root_.java.io.InputStream
-import _root_.javax.servlet.http.{HttpSessionActivationListener, HttpSessionEvent, HttpServletRequest}
 import _root_.scala.xml.transform._
 import _root_.java.util.concurrent.TimeUnit
 import js._
 import scala.reflect.Manifest
+import provider._
 
 object LiftSession {
 
   /**
    * Returns a reference to a LiftSession dictated by LiftRules#sessionCreator function.
    */
-  def apply(session: HttpSession, contextPath: String, headers: List[(String, String)]) =
-  LiftRules.sessionCreator(session, contextPath, headers)
+  def apply(session: HTTPServiceSession, contextPath: String) =
+  LiftRules.sessionCreator(session, contextPath)
 
   /**
    * Holds user's functions that will be called when the session is activated
@@ -84,33 +83,6 @@ private[http] case class RemoveSession(sessionId: String)
 case class SessionWatcherInfo(sessions: Map[String, LiftSession])
 
 /**
- * Represents the "bridge" between HttpSession and LiftSession
- */
-@serializable
-case class SessionToServletBridge(uniqueId: String) extends HttpSessionBindingListener with HttpSessionActivationListener {
-  def sessionDidActivate(se: HttpSessionEvent) = {
-    SessionMaster.getSession(uniqueId, Empty).foreach(ls =>
-      LiftSession.onSessionActivate.foreach(_(ls)))
-  }
-
-  def sessionWillPassivate(se: HttpSessionEvent) = {
-    SessionMaster.getSession(uniqueId, Empty).foreach(ls =>
-      LiftSession.onSessionPassivate.foreach(_(ls)))
-  }
-
-  def valueBound(event: HttpSessionBindingEvent) {
-  }
-
-  /**
-   * When the session is unbound the the HTTP session, stop us
-   */
-  def valueUnbound(event: HttpSessionBindingEvent) {
-    SessionMaster.sendMsg(RemoveSession(uniqueId))
-  }
-
-}
-
-/**
  * Manages LiftSessions because the servlet container is less than optimal at
  * timing sessions out.
  */
@@ -133,17 +105,17 @@ object SessionMaster extends Actor {
   /**
    * Returns a LiftSession or Empty if not found
    */
-  def getSession(httpSession: => HttpSession, otherId: Box[String]): Box[LiftSession] =
+  def getSession(httpSession: => HTTPServiceSession, otherId: Box[String]): Box[LiftSession] =
   synchronized {
-    otherId.flatMap(sessions.get) or Box(sessions.get(httpSession.getId()))
+    otherId.flatMap(sessions.get) or Box(sessions.get(httpSession.sessionID))
   }
 
   /**
    * Returns a LiftSession or Empty if not found
    */
-  def getSession(req: HttpServletRequest, otherId: Box[String]): Box[LiftSession] =
+  def getSession(req: HTTPRequest, otherId: Box[String]): Box[LiftSession] =
   synchronized {
-    otherId.flatMap(sessions.get) or Box(sessions.get(req.getSession.getId()))
+    otherId.flatMap(sessions.get) or Box(sessions.get(req.session.sessionID))
   }
 
   /**
@@ -154,11 +126,8 @@ object SessionMaster extends Actor {
       sessions = sessions + (liftSession.uniqueId -> liftSession)
     }
     liftSession.startSession()
-    val b = SessionToServletBridge(liftSession.uniqueId)
-    liftSession.httpSession.foreach(_.setAttribute(LiftMagicID, b))
+    liftSession.httpSession.foreach(_.link(liftSession))
   }
-
-  private val LiftMagicID = "$lift_magic_session_thingy$"
 
   def act = {
     doPing()
@@ -175,7 +144,7 @@ object SessionMaster extends Actor {
         try {
           s.doShutDown
           try {
-            s.httpSession.foreach(_.removeAttribute(LiftMagicID))
+            s.httpSession.foreach(_.unlink(s))
           } catch {
             case e => // ignore... sometimes you can't do this and it's okay
           }
@@ -252,7 +221,7 @@ object RenderVersion {
  */
 @serializable
 class LiftSession(val contextPath: String, val uniqueId: String,
-                  val httpSession: Box[HttpSession], val initialHeaders: List[(String, String)]) {
+                  val httpSession: Box[HTTPServiceSession]) {
   import TemplateFinder._
 
   type AnyActor = {def !(in: Any): Unit}
@@ -287,7 +256,7 @@ class LiftSession(val contextPath: String, val uniqueId: String,
   private[http] def startSession(): Unit = {
     _running_? = true
     for (sess <- httpSession) {
-      inactivityLength = sess.getMaxInactiveInterval.toLong * 1000L
+      inactivityLength = sess.maxInactiveInterval * 1000L
     }
 
     lastServiceTime = millis
@@ -401,8 +370,8 @@ class LiftSession(val contextPath: String, val uniqueId: String,
   private [http] def fixSessionTime(): Unit = synchronized {
     for (httpSession <- this.httpSession) {
       lastServiceTime = millis // DO NOT REMOVE THIS LINE!!!!!
-      val diff = lastServiceTime - httpSession.getLastAccessedTime
-      val maxInactive = httpSession.getMaxInactiveInterval()
+      val diff = lastServiceTime - httpSession.lastAccessedTime
+      val maxInactive = httpSession.maxInactiveInterval.toInt
       val togo: Int = maxInactive - (diff / 1000L).toInt
       // if we're within 2 minutes of session timeout and
       // the Servlet session doesn't seem to have been updated,
@@ -474,7 +443,7 @@ class LiftSession(val contextPath: String, val uniqueId: String,
         LiftSession.onShutdownSession.foreach(f => done ::= (() => f(this)))
       }
     }
-  
+
     done.foreach(_.apply())
 
   }
@@ -1003,7 +972,7 @@ class LiftSession(val contextPath: String, val uniqueId: String,
   {
     val what = (theType -> name)
     val ret = synchronized {
-   
+
       val ret = Box(asyncComponents.get(what)).or( {
           theType.flatMap{
             tpe =>
@@ -1016,7 +985,7 @@ class LiftSession(val contextPath: String, val uniqueId: String,
             ret
           }
         })
-    
+
       ret
     }
 
@@ -1164,7 +1133,7 @@ object TemplateFinder {
       }
   }
 
-  import _root_.java.util.Locale
+  import java.util.Locale
 
   /**
    * Given a list of paths (e.g. List("foo", "index")),
@@ -1247,7 +1216,7 @@ object TemplateFinder {
                   found = true
                   ret = (cache(key) = xmlb.open_!)
                 } else if (xmlb.isInstanceOf[Failure] && Props.devMode) {
-                  val msg = xmlb.asInstanceOf[Failure].msg  
+                  val msg = xmlb.asInstanceOf[Failure].msg
                   val e = xmlb.asInstanceOf[Failure].exception
                   return(Full(<div style="border: 1px red solid">Error locating template {name}.<br/>  Message: {msg} <br/>
                         {

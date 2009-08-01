@@ -17,7 +17,6 @@ package net.liftweb.http
 
 import _root_.net.liftweb.util.{Box, Full, Empty, Helpers}
 import Helpers._
-import _root_.javax.servlet.http.{HttpServletRequest , HttpServletResponse}
 import _root_.java.net.{URLConnection}
 
 object ResourceServer {
@@ -63,7 +62,7 @@ object ResourceServer {
                       List(("Last-Modified", toInternetDate(uc.getLastModified)),
                            ("Expires", toInternetDate(millis + 48.hours)),
                            ("Content-Type", detectContentType(rw.last))), Nil,
-                      HttpServletResponse.SC_OK)
+                      200)
   }
 
 
@@ -80,7 +79,7 @@ object ResourceServer {
    */
   def detectContentType(path: String) : String = {
     // Configure response with content type of resource
-    ((Box !! LiftRules.context.getMimeType(path)) or
+    ((Box !! LiftRules.context.mimeType(path)) or
      (Box !! URLConnection.getFileNameMap().getContentTypeFor(path))) openOr
     "application/octet-stream"
   }

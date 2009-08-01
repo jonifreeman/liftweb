@@ -15,20 +15,19 @@
  */
 package net.liftweb.http
 
-import _root_.javax.servlet.http._
-import _root_.javax.servlet.ServletContext
 import _root_.net.liftweb.util.Helpers
 import Helpers._
 import _root_.net.liftweb.util.{Log, Box, Full, Empty,
                                 EmptyBox,
                                 Failure, ThreadGlobal,
                                 NamedPF, NamedPartialFunction}
-import _root_.net.liftweb.sitemap._
+import _root_.net.liftweb.http.provider._
+import _root_.net.liftweb.util.Helpers
 import _root_.java.io.{InputStream, ByteArrayInputStream, File, FileInputStream,
                        FileOutputStream}
 import _root_.scala.xml._
-import _root_.org.apache.commons.fileupload.servlet._
-import _root_.org.apache.commons.fileupload.ProgressListener
+import sitemap._
+
 
 @serializable
 sealed trait ParamHolder {
@@ -102,12 +101,12 @@ object FileParamHolder {
 object Req {
   object NilPath extends ParsePath(Nil, "", true, false)
 
-  def apply(request: HttpServletRequest, rewrite: List[LiftRules.RewritePF], nanoStart: Long): Req = {
+  def apply(request: HTTPRequest, rewrite: List[LiftRules.RewritePF], nanoStart: Long): Req = {
     val reqType = RequestType(request)
-    val turi = request.getRequestURI.substring(request.getContextPath.length)
+    val turi = request.uri.substring(request.contextPath.length)
     val tmpUri = if (turi.length > 0) turi else "/"
     val contextPath = LiftRules.calculateContextPath(request) openOr
-    request.getContextPath
+    request.contextPath
 
     val tmpPath = parsePath(tmpUri)
 
@@ -130,7 +129,7 @@ object Req {
     val eMap = Map.empty[String, List[String]]
 
 
-    val contentType = request.getContentType match {
+    val contentType = request.contentType match {
       case null => ""
       case s => s
     }
@@ -139,34 +138,19 @@ object Req {
     val paramCalculator = () =>
     if ((reqType.post_? ||
          reqType.put_?) && contentType.startsWith("text/xml")) {
-      (Nil,localParams, Nil, tryo(readWholeStream(request.getInputStream)))
-    } else if (ServletFileUpload.isMultipartContent(request)) {
-      val allInfo = (new Iterator[ParamHolder] {
-          val mimeUpload = (new ServletFileUpload)
-          mimeUpload.setProgressListener(new ProgressListener{
-              lazy val progList: (Long, Long, Int) => Unit = S.session.flatMap(_.progressListener) openOr LiftRules.progressListener
-
-              def update(a: Long, b: Long, c: Int) {progList(a,b,c)}
-            })
-          mimeUpload.setSizeMax(LiftRules.maxMimeSize)
-          mimeUpload.setFileSizeMax(LiftRules.maxMimeFileSize)
-          val what = mimeUpload.getItemIterator(request)
-          def hasNext = what.hasNext
-          def next = what.next match {
-            case f if (f.isFormField) => NormalParamHolder(f.getFieldName, new String(readWholeStream(f.openStream), "UTF-8"))
-            case f => LiftRules.handleMimeFile(f.getFieldName, f.getContentType, f.getName, f.openStream)
-          }
-        }).toList
+      (Nil,localParams, Nil, tryo(readWholeStream(request.inputStream)))
+    } else if (request multipartContent_?) {
+      val allInfo = request extractFiles
 
       val normal: List[NormalParamHolder] = allInfo.flatMap{case v: NormalParamHolder => List(v) case _ => Nil}
       val files: List[FileParamHolder] = allInfo.flatMap{case v: FileParamHolder => List(v) case _ => Nil}
 
-      val params = normal.foldLeft(eMap)((a,b) => 
+      val params = normal.foldLeft(eMap)((a,b) =>
         a + (b.name -> (a.getOrElse(b.name, Nil) ::: List(b.value))))
 
       (normal.map(_.name).removeDuplicates, localParams ++ params, files, Empty)
     } else if (reqType.get_?) {
-      request.getQueryString match {
+      request.queryString match {
         case null => (Nil, localParams, Nil, Empty)
         case s =>
           val pairs = s.split("&").toList.map(_.trim).filter(_.length > 0).map(_.split("=").toList match {
@@ -187,12 +171,11 @@ object Req {
           (names, hereParams, Nil, Empty)
       }
     } else if (contentType.toLowerCase.startsWith("application/x-www-form-urlencoded")) {
-      val paramNames =  enumToStringList(request.getParameterNames).sort{(s1, s2) => s1 < s2}
       // val tmp = paramNames.map{n => (n, xlateIfGet(request.getParameterValues(n).toList))}
-      val params = localParams ++ paramNames.map{n => (n, request.getParameterValues(n).toList)}
-      (paramNames, params, Nil, Empty)
+      val params = localParams ++ (request.params.sort{(s1, s2) => s1.name < s2.name}).map(n => (n.name, n.values))
+      (request paramNames, params, Nil, Empty)
     } else {
-      (Nil,localParams, Nil, tryo(readWholeStream(request.getInputStream)))
+      (Nil,localParams, Nil, tryo(readWholeStream(request inputStream)))
     }
 
     new Req(rewritten.path, contextPath, reqType,
@@ -286,7 +269,7 @@ class Req(val path: ParsePath,
           val contextPath: String,
           val requestType: RequestType,
           val contentType: String,
-          val request: HttpServletRequest,
+          val request: HTTPRequest,
           val nanoStart: Long,
           val nanoEnd: Long,
           val paramCalculator: () => (List[String], Map[String, List[String]],List[FileParamHolder],Box[Array[Byte]])) extends HasParams
@@ -312,9 +295,10 @@ class Req(val path: ParsePath,
   }
 
   lazy val headers: List[(String, String)] =
-  for (header <- enumToList[String](request.getHeaderNames.asInstanceOf[_root_.java.util.Enumeration[String]]);
-       item <- enumToList[String](request.getHeaders(header).asInstanceOf[_root_.java.util.Enumeration[String]]))
-  yield (header, item)
+    for (h <- request.headers;
+         p <- h.values
+    ) yield (h name, p)
+
 
   def headers(name: String): List[String] = headers.filter(_._1.equalsIgnoreCase(name)).map(_._2)
   def header(name: String): Box[String] = headers(name) match {
@@ -327,7 +311,7 @@ class Req(val path: ParsePath,
             uploadedFiles: List[FileParamHolder],
             body: Box[Array[Byte]]) = paramCalculator()
 
-  lazy val cookies = request.getCookies() match {
+  lazy val cookies = request.cookies match {
     case null => Nil
     case ca => ca.toList
   }
@@ -377,8 +361,8 @@ class Req(val path: ParsePath,
   lazy val uri: String = request match {
     case null => "Outside HTTP Request (e.g., on Actor)"
     case request =>
-      val ret = for (uri <- Box.legacyNullTest(request.getRequestURI);
-                     val cp = Box.legacyNullTest(request.getContextPath) openOr "") yield
+      val ret = for (uri <- Box.legacyNullTest(request.uri);
+                     val cp = Box.legacyNullTest(request.contextPath) openOr "") yield
       uri.substring(cp.length)
       match {
         case "" => "/"
@@ -390,7 +374,7 @@ class Req(val path: ParsePath,
   /**
    * The IP address of the request
    */
-  def remoteAddr: String = request.getRemoteAddr()
+  def remoteAddr: String = request.remoteAdress
 
   /**
    * Parse the if-modified-since header and return the milliseconds since epoch
@@ -398,7 +382,7 @@ class Req(val path: ParsePath,
    */
   lazy val ifModifiedSince: Box[java.util.Date] =
   for {req <- Box !! request
-       ims <- Box !! req.getHeader("if-modified-since")
+       ims <- Box !! req.header("if-modified-since")
        id <- boxParseInternetDate(ims)
   } yield id
 
@@ -417,7 +401,7 @@ class Req(val path: ParsePath,
    */
   lazy val userAgent: Box[String] =
   for (r <- Box.legacyNullTest(request);
-       uah <- Box.legacyNullTest(request.getHeader("User-Agent")))
+       uah <- Box.legacyNullTest(request.header("User-Agent")))
   yield uah
 
   lazy val isIE6: Boolean = (userAgent.map(_.indexOf("MSIE 6") >= 0)) openOr false
@@ -445,7 +429,7 @@ class Req(val path: ParsePath,
   def updateWithContextPath(uri: String): String = if (uri.startsWith("/")) contextPath + uri else uri
 }
 
-case class RewriteRequest(path: ParsePath, requestType: RequestType, httpRequest: HttpServletRequest)
+case class RewriteRequest(path: ParsePath, requestType: RequestType, httpRequest: HTTPRequest)
 case class RewriteResponse(path: ParsePath, params: Map[String, String], stopRewriting: Boolean)
 
 /**
