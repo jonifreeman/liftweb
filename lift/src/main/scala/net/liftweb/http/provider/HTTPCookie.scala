@@ -16,6 +16,7 @@ case class HTTPCookie(name: String,
                       secure_? : Box[Boolean]) extends java.lang.Cloneable {
 
   override def clone(): HTTPCookie = {
+    super.clone()
     new HTTPCookie(name, value, domain, path, maxAge, version, secure_?)
   }
 
