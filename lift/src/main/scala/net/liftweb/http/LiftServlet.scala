@@ -28,7 +28,6 @@ import _root_.net.liftweb.util.ActorPing
 import _root_.java.util.{Locale, ResourceBundle}
 import _root_.java.net.URL
 import js._
-import _root_.javax.servlet._
 import auth._
 import provider._
 
