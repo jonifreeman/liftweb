@@ -128,16 +128,12 @@ object Req {
     //  val body = ()
     val eMap = Map.empty[String, List[String]]
 
-
-    val contentType = request.contentType match {
-      case null => ""
-      case s => s
-    }
+    val contentType = request.contentType
 
     //    val (paramNames: List[String], params: Map[String, List[String]], files: List[FileParamHolder], body: Box[Array[Byte]]) =
     val paramCalculator = () =>
     if ((reqType.post_? ||
-         reqType.put_?) && contentType.startsWith("text/xml")) {
+         reqType.put_?) && contentType.dmap(false)(_.startsWith("text/xml"))) {
       (Nil,localParams, Nil, tryo(readWholeStream(request.inputStream)))
     } else if (request multipartContent_?) {
       val allInfo = request extractFiles
@@ -150,8 +146,7 @@ object Req {
 
       (normal.map(_.name).removeDuplicates, localParams ++ params, files, Empty)
     } else if (reqType.get_?) {
-      request.queryString match {
-        case null => (Nil, localParams, Nil, Empty)
+      (request.queryString map {
         case s =>
           val pairs = s.split("&").toList.map(_.trim).filter(_.length > 0).map(_.split("=").toList match {
               case name :: value :: Nil => (true, urlDecode(name), urlDecode(value))
@@ -169,8 +164,8 @@ object Req {
           val hereParams = localParams ++ params
 
           (names, hereParams, Nil, Empty)
-      }
-    } else if (contentType.toLowerCase.startsWith("application/x-www-form-urlencoded")) {
+      }) openOr (Nil, localParams, Nil, Empty)
+    } else if (contentType.dmap(false)(_.toLowerCase.startsWith("application/x-www-form-urlencoded"))) {
       // val tmp = paramNames.map{n => (n, xlateIfGet(request.getParameterValues(n).toList))}
       val params = localParams ++ (request.params.sort{(s1, s2) => s1.name < s2.name}).map(n => (n.name, n.values))
       (request paramNames, params, Nil, Empty)
@@ -188,7 +183,7 @@ object Req {
     case x @ _ => uri substring(0, x)
   }
 
-  def nil = new Req(NilPath, "", GetRequest, "", null,
+  def nil = new Req(NilPath, "", GetRequest, Empty, null,
                     System.nanoTime, System.nanoTime,
                     () => (Nil, Map.empty, Nil, Empty))
 
@@ -268,7 +263,7 @@ object Req {
 class Req(val path: ParsePath,
           val contextPath: String,
           val requestType: RequestType,
-          val contentType: String,
+          val contentType: Box[String],
           val request: HTTPRequest,
           val nanoStart: Long,
           val nanoEnd: Long,
@@ -281,7 +276,7 @@ class Req(val path: ParsePath,
   /**
    * Returns true if the content-type is text/xml
    */
-  def xml_? = contentType != null && contentType.toLowerCase.startsWith("text/xml")
+  def xml_? = contentType != null && contentType.dmap(false)(_.toLowerCase.startsWith("text/xml"))
 
   val section = path(0) match {case null => "default"; case s => s}
   val view = path(1) match {case null => "index"; case s @ _ => s}
@@ -382,7 +377,7 @@ class Req(val path: ParsePath,
    */
   lazy val ifModifiedSince: Box[java.util.Date] =
   for {req <- Box !! request
-       ims <- Box !! req.header("if-modified-since")
+       ims <- req.header("if-modified-since")
        id <- boxParseInternetDate(ims)
   } yield id
 
@@ -401,7 +396,7 @@ class Req(val path: ParsePath,
    */
   lazy val userAgent: Box[String] =
   for (r <- Box.legacyNullTest(request);
-       uah <- Box.legacyNullTest(request.header("User-Agent")))
+       uah <- request.header("User-Agent"))
   yield uah
 
   lazy val isIE6: Boolean = (userAgent.map(_.indexOf("MSIE 6") >= 0)) openOr false

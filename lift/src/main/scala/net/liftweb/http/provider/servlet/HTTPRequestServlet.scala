@@ -36,26 +36,24 @@ class HTTPRequestServlet(req: HttpServletRequest) extends HTTPRequest {
                                               Box !! (c.getVersion),
                                               Box !! (c.getSecure)))) openOr Nil
 
-  def authType:String = req.getAuthType
+  def authType: Box[String] = Box !! req.getAuthType
 
-  def header(name: String): String = req.getHeader(name)
+  def header(name: String): Box[String] = Box !! req.getHeader(name)
 
   def headers(name: String): List[String] = enumToList[String](req.getHeaders(name).asInstanceOf[_root_.java.util.Enumeration[String]])
 
   def headers: List[HTTPParam] = enumToList[String](req.getHeaderNames.asInstanceOf[_root_.java.util.Enumeration[String]]).
     map(n => HTTPParam(n, headers(n)))
 
-  def path: String = req.getPathInfo
-
   def contextPath: String = req.getContextPath
 
-  def contentType = req getContentType
+  def contentType = Box !! req.getContentType
 
   def session = new HTTPServletSession(req getSession)
 
   def uri = req.getRequestURI
 
-  def queryString: String = req.getQueryString
+  def queryString: Box[String] = Box !! req.getQueryString
 
   def param(name: String): List[String] = req.getParameterValues(name).toList
 
@@ -78,7 +76,7 @@ class HTTPRequestServlet(req: HttpServletRequest) extends HTTPRequest {
 
   def method: String = req.getMethod
 
-  def locale: Locale = req getLocale
+  def locale: Box[Locale] = Box !! req.getLocale
 
   def inputStream: InputStream = req.getInputStream
 

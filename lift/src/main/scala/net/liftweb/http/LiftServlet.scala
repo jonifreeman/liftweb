@@ -422,7 +422,7 @@ class LiftServlet {
     def pairFromRequest(in: Box[Req]): (Box[Req], Box[String]) = {
       val acceptHeader = for (req <- in;
                               innerReq <- Box.legacyNullTest(req.request);
-                              accept <- Box.legacyNullTest(innerReq.header("Accept"))) yield accept
+                              accept <- innerReq.header("Accept")) yield accept
 
       (in, acceptHeader)
     }

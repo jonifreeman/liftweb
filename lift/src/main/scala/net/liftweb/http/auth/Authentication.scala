@@ -32,7 +32,7 @@ import _root_.scala.actors.Actor._
  */
 trait HttpAuthentication {
 
-  def header(r: Req) = Box !! r.request.header("Authorization")
+  def header(r: Req): Box[String] = r.request.header("Authorization")
 
   def verified_? : PartialFunction[Req, Boolean]
 

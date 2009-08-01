@@ -1,22 +1,49 @@
+/*
+ * Copyright 2007-2009 WorldWide Conferencing, LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions
+ * and limitations under the License.
+ */
 package net.liftweb.http.provider
 
 import net.liftweb.util._
 import _root_.java.util.{Locale, ResourceBundle}
 import Helpers._
 
+/**
+ * Implement this trait in order to integrate Lift with other underlaying web containers. Not necessarily JEE containers.
+ */
 trait HTTPProvider {
   private var actualServlet: LiftServlet = _
 
-  def context: HTTPServiceContext
+  protected def context: HTTPServiceContext
 
-  def terminate {
+  /**
+   * Call this from your implementation when the application terminates.
+   */
+  protected def terminate {
     if (actualServlet != null) {
       actualServlet.destroy
       actualServlet = null
     }
   }
 
-  def service[T](req: HTTPRequest, resp: HTTPResponse)(chain : => T) = {
+  /**
+   * Call this function in order for Lift to process this request
+   * @param req - the request object
+   * @param resp - the response object
+   * @param chain - function to be executed in case this request is supposed to not be processed by Lift
+   */
+  protected def service[T](req: HTTPRequest, resp: HTTPResponse)(chain : => T) = {
     tryo {
        LiftRules.early.toList.foreach(_(req))
     }
@@ -31,9 +58,9 @@ trait HTTPProvider {
   }
   
   /**
-   * Executes Lift's Boot
+   * Executes Lift's Boot and makes necessary initializations
    */
-  def bootLift(loader : Box[String]) : Unit =
+  protected def bootLift(loader : Box[String]) : Unit =
   {
     try
     {
@@ -81,7 +108,7 @@ trait HTTPProvider {
   /**
    * Tests if a request should be handled by Lift or passed to the container to be executed by other potential filters or servlets.
    */
-  def isLiftRequest_?(session: Req): Boolean = {
+  protected def isLiftRequest_?(session: Req): Boolean = {
     NamedPF.applyBox(session, LiftRules.liftRequest.toList) match {
       case Full(b) => b
       case _ =>  session.path.endSlash ||

@@ -429,9 +429,7 @@ object LiftRules {
   var localeCalculator: Box[HTTPRequest] => Locale = defaultLocaleCalculator _
 
   def defaultLocaleCalculator(request: Box[HTTPRequest]) =
-  request.flatMap(_.locale match {
-      case null => Empty
-      case l: Locale => Full(l)}).openOr(Locale.getDefault())
+  request.flatMap(_.locale).openOr(Locale.getDefault())
 
   var resourceBundleFactories = RulesSeq[ResourceBundleFactoryPF]
 
@@ -518,10 +516,9 @@ object LiftRules {
    * The default way of calculating the context path
    */
   def defaultCalcContextPath(request: HTTPRequest): Box[String] = {
-    request.header("X-Lift-ContextPath") match {
-      case null => Empty
-      case s if s.trim == "/" => Full("")
-      case s => Full(s.trim)
+    request.header("X-Lift-ContextPath").map {
+      case s if s.trim == "/" => ""
+      case s => s.trim
     }
   }
 

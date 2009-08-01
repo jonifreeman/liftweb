@@ -1107,7 +1107,7 @@ object S extends HasParams {
   /**
    * Returns the 'Referer' HTTP header attribute.
    */
-  def referer: Box[String] = servletRequest.flatMap(r => Box.legacyNullTest(r.header("Referer")))
+  def referer: Box[String] = servletRequest.flatMap(_.header("Referer"))
 
 
   /**
