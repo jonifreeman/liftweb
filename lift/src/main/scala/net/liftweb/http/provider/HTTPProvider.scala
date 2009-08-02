@@ -15,7 +15,7 @@
  */
 package net.liftweb.http.provider
 
-import net.liftweb.util._
+import _root_.net.liftweb.util._
 import _root_.java.util.{Locale, ResourceBundle}
 import Helpers._
 

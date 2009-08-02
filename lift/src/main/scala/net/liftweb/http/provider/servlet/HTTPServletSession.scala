@@ -1,7 +1,7 @@
 package net.liftweb.http.provider.servlet
 
 import _root_.javax.servlet.http._
-import net.liftweb.util._
+import _root_.net.liftweb.util._
 
 class HTTPServletSession(session: HttpSession) extends HTTPServiceSession {
   private val LiftMagicID = "$lift_magic_session_thingy$"

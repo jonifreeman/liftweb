@@ -15,7 +15,7 @@
  */
 package net.liftweb.http.provider
 
-import net.liftweb.util.{Box, Empty, Full}
+import _root_.net.liftweb.util.{Box, Empty, Full}
 
 /**
  * Companion module for creating HTTPCookie objects

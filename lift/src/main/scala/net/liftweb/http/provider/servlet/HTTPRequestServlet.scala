@@ -5,7 +5,7 @@ import _root_.java.util.{Locale}
 import _root_.javax.servlet.http.{HttpServletRequest}
 import _root_.org.apache.commons.fileupload.servlet._
 import _root_.org.apache.commons.fileupload.ProgressListener
-import net.liftweb.util._
+import _root_.net.liftweb.util._
 import Helpers._
 
 class HTTPRequestServlet(req: HttpServletRequest) extends HTTPRequest {

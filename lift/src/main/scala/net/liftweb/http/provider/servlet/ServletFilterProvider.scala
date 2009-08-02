@@ -3,8 +3,8 @@ package net.liftweb.http.provider.servlet
 import _root_.javax.servlet._
 import _root_.javax.servlet.http._
 
-import net.liftweb.util._
-import net.liftweb.http._
+import _root_.net.liftweb.util._
+import _root_.net.liftweb.http._
 import Helpers._
 
 trait ServletFilterProvider extends Filter with HTTPProvider {
