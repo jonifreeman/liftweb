@@ -29,6 +29,7 @@ import _root_.scala.xml.{Node, NodeSeq, Elem, MetaData, Null, UnprefixedAttribut
 import _root_.java.io.InputStream
 import _root_.scala.xml.transform._
 import _root_.java.util.concurrent.TimeUnit
+import _root_.java.util.Locale
 import js._
 import scala.reflect.Manifest
 import provider._
@@ -1132,8 +1133,6 @@ object TemplateFinder {
         case _ => findInViews(whole, part, last, xs)
       }
   }
-
-  import java.util.Locale
 
   /**
    * Given a list of paths (e.g. List("foo", "index")),

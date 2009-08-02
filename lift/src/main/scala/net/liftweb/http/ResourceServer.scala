@@ -79,7 +79,7 @@ object ResourceServer {
    */
   def detectContentType(path: String) : String = {
     // Configure response with content type of resource
-    ((Box !! LiftRules.context.mimeType(path)) or
+    (LiftRules.context.mimeType(path) or
      (Box !! URLConnection.getFileNameMap().getContentTypeFor(path))) openOr
     "application/octet-stream"
   }

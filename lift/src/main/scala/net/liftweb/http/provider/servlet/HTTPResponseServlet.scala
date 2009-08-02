@@ -2,7 +2,7 @@ package net.liftweb.http.provider.servlet
 
 
 import scala.collection.mutable.{ListBuffer}
-import java.io.{OutputStream}
+import _root_.java.io.{OutputStream}
 import _root_.javax.servlet.http.{HttpServletResponse, Cookie}
 import net.liftweb.util._
 import Helpers._
@@ -21,8 +21,6 @@ class HTTPResponseServlet(resp: HttpServletResponse) extends HTTPResponse {
   }
 
   def encodeURL(url: String): String = resp encodeURL url
-
-  def encodeRedirectURL(url: String): String = resp encodeRedirectURL url
 
   def addHeaders(headers: List[HTTPParam]) =
     for (h <- headers;

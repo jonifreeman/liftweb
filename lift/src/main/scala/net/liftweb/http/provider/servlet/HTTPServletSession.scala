@@ -1,6 +1,6 @@
 package net.liftweb.http.provider.servlet
 
-import javax.servlet.http._
+import _root_.javax.servlet.http._
 import net.liftweb.util._
 
 class HTTPServletSession(session: HttpSession) extends HTTPServiceSession {
