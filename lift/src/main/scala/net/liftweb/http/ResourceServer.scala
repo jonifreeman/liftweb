@@ -67,14 +67,14 @@ object ResourceServer {
 
 
   /**
-   * detect the Content-Type of file (path) with servlet-context-defined content-types
-   * (application's web.xml or servlet container's configuration), and fall
+   * detect the Content-Type of file (path) with context-defined content-types
+   * (application's web.xml or container's configuration), and fall
    * back to system or JVM-defined (FileNameMap) content types.
    * if no content-type found, then return "application/octet-stream"
    *
    * @param path Resource name to be analyzed to detect MIME type
    *
-   * @see ServletContext#getMimeType(String)
+   * @see HTTPContext#mimeType(String)
    * @see URLConnection#getFileNameMap()
    */
   def detectContentType(path: String) : String = {

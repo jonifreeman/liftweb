@@ -53,6 +53,8 @@ class HTTPRequestServlet(req: HttpServletRequest) extends HTTPRequest {
 
   def uri = req.getRequestURI
 
+  def url = req.getRequestURL.toString
+
   def queryString: Box[String] = Box !! req.getQueryString
 
   def param(name: String): List[String] = req.getParameterValues(name).toList
@@ -62,7 +64,7 @@ class HTTPRequestServlet(req: HttpServletRequest) extends HTTPRequest {
 
   def paramNames: List[String] = params map(_.name)
 
-  def remoteAdress: String = req.getRemoteAddr
+  def remoteAddress: String = req.getRemoteAddr
 
   def remotePort: Int = req.getRemotePort
 
@@ -134,7 +136,7 @@ class HTTPRequestServlet(req: HttpServletRequest) extends HTTPRequest {
     resume.invoke(cont)
   }
 
-
+  def setCharacterEncoding(encoding: String) = req.setCharacterEncoding(encoding)
 
 
 }

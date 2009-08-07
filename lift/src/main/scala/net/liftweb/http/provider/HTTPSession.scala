@@ -18,12 +18,12 @@ package net.liftweb.http.provider
 /**
  * The representation of a HTTP session
  */
-trait HTTPServiceSession {
+trait HTTPSession {
 
   /**
    * @return - the HTTP session ID
    */
-  def sessionID: String
+  def sessionId: String
 
   /**
    * Links a LiftSession with this HTTP session. Hence when the HTTP session 
@@ -82,4 +82,9 @@ trait HTTPServiceSession {
    * @param name - the attribute name
    */
   def removeAttribute(name: String): Unit
+
+  /**
+   * Terminates this session
+   */
+  def terminate: Unit
 }

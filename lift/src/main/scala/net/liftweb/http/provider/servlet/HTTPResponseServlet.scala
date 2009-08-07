@@ -20,7 +20,7 @@ class HTTPResponseServlet(resp: HttpServletResponse) extends HTTPResponse {
       resp.addCookie(cookie)
   }
 
-  def encodeURL(url: String): String = resp encodeURL url
+  def encodeUrl(url: String): String = resp encodeURL url
 
   def addHeaders(headers: List[HTTPParam]) =
     for (h <- headers;

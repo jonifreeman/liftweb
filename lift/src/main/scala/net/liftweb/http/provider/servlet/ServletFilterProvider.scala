@@ -8,7 +8,7 @@ import _root_.net.liftweb.http._
 import Helpers._
 
 trait ServletFilterProvider extends Filter with HTTPProvider {
-  var ctx: HTTPServiceContext = _
+  var ctx: HTTPContext = _
 
   //We need to capture the ServletContext on init
   def init(config: FilterConfig) {
@@ -26,7 +26,7 @@ trait ServletFilterProvider extends Filter with HTTPProvider {
     terminate
   }
 
-  def context: HTTPServiceContext = ctx
+  def context: HTTPContext = ctx
 
   /**
    * Executes the Lift filter component.

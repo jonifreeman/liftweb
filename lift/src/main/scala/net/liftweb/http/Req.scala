@@ -369,7 +369,7 @@ class Req(val path: ParsePath,
   /**
    * The IP address of the request
    */
-  def remoteAddr: String = request.remoteAdress
+  def remoteAddr: String = request.remoteAddress
 
   /**
    * Parse the if-modified-since header and return the milliseconds since epoch
@@ -440,7 +440,7 @@ case class ParsePath(partPath: List[String], suffix: String, absolute: Boolean, 
 
 /**
  * Maintains the context of resolving the URL when cookies are disabled from container. It maintains
- * low coupling such as code within request processing is not aware of the servlet response that
+ * low coupling such as code within request processing is not aware of the actual response that
  * ancodes the URL.
  */
 object RewriteResponse {

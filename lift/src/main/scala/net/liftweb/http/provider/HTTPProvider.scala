@@ -25,7 +25,7 @@ import Helpers._
 trait HTTPProvider {
   private var actualServlet: LiftServlet = _
 
-  protected def context: HTTPServiceContext
+  protected def context: HTTPContext
 
   /**
    * Call this from your implementation when the application terminates.
@@ -43,14 +43,14 @@ trait HTTPProvider {
    * @param resp - the response object
    * @param chain - function to be executed in case this request is supposed to not be processed by Lift
    */
-  protected def service[T](req: HTTPRequest, resp: HTTPResponse)(chain : => T) = {
+  protected def service(req: HTTPRequest, resp: HTTPResponse)(chain : => Unit) = {
     tryo {
        LiftRules.early.toList.foreach(_(req))
     }
 
     val newReq = Req(req, LiftRules.rewriteTable(req), System.nanoTime)
 
-    URLRewriter.doWith(url => NamedPF.applyBox(resp.encodeURL(url), LiftRules.urlDecorate.toList) openOr resp.encodeURL(url)) {
+    URLRewriter.doWith(url => NamedPF.applyBox(resp.encodeUrl(url), LiftRules.urlDecorate.toList) openOr resp.encodeUrl(url)) {
       if (!(isLiftRequest_?(newReq) && actualServlet.service(newReq, resp))) {
         chain
       }

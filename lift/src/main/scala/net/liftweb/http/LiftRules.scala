@@ -84,11 +84,11 @@ object LiftRules {
    * and returns a LiftSession reference. This can be used in cases subclassing
    * LiftSession is necessary.
    */
-  var sessionCreator: (HTTPServiceSession,  String) => LiftSession = {
-    case (httpSession, contextPath) => new LiftSession(contextPath, httpSession.sessionID, Full(httpSession))
+  var sessionCreator: (HTTPSession,  String) => LiftSession = {
+    case (httpSession, contextPath) => new LiftSession(contextPath, httpSession.sessionId, Full(httpSession))
   }
 
-  var enableServletSessions = true
+  var enableContainerSessions = true
 
   var getLiftSession: (Req) => LiftSession = (req) => _getLiftSession(req)
 
@@ -212,8 +212,8 @@ object LiftRules {
   var maxMimeSize: Long = 8 * 1024 * 1024
 
   /**
-   * Should pages that are not found be passed along the servlet chain to the
-   * next handler?
+   * Should pages that are not found be passed along the request processing chain to the
+   * next handler outside Lift?
    */
   var passNotFoundToChain = false
 
@@ -529,17 +529,17 @@ object LiftRules {
   var calculateContextPath: HTTPRequest => Box[String] =
   defaultCalcContextPath _
 
-  private var _context: HTTPServiceContext = _
+  private var _context: HTTPContext = _
 
   /**
    * Returns the HTTPContext
    */
-  def context: HTTPServiceContext = synchronized {_context}
+  def context: HTTPContext = synchronized {_context}
 
   /**
    * Sets the HTTPContext
    */
-  def setContext(in: HTTPServiceContext): Unit =  synchronized {
+  def setContext(in: HTTPContext): Unit =  synchronized {
     if (in ne _context) {
       _context = in
     }
@@ -628,7 +628,7 @@ object LiftRules {
 
   /**
    * Get the partial function that defines if a request should be handled by
-   * the application (rather than the default servlet handler)
+   * the application (rather than the default container handler)
    */
   val liftRequest = RulesSeq[LiftRequestPF]
 

@@ -75,6 +75,11 @@ trait HTTPRequest {
   def uri: String
 
   /**
+   * @return - the request URL
+   */
+  def url: String
+
+  /**
    * @return - the entire query string. Empty if the requst contains no query string
    */
   def queryString: Box[String]
@@ -98,12 +103,12 @@ trait HTTPRequest {
   /**
    * @return - the HTTP session associated with this request
    */
-  def session: HTTPServiceSession
+  def session: HTTPSession
 
   /**
    * @return - the remote address of the client or the last seen proxy.
    */
-  def remoteAdress: String
+  def remoteAddress: String
 
   /**
    * @return - the source port of the client or last seen proxy.
@@ -169,5 +174,12 @@ trait HTTPRequest {
    * @return - the locale forthis request. Empty if there is not language information.
    */
   def locale: Box[Locale]
+  
+  /**
+   * Sets the character encoding that will be used for request body read
+   * 
+   * @param encoding - the encoding that will be used (e.g. UTF-8)
+   */
+  def setCharacterEncoding(encoding: String)
 
 }

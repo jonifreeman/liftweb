@@ -35,14 +35,14 @@ import _root_.net.liftweb.actor._
 
 
 class LiftServlet {
-  private var servletContext: HTTPServiceContext = null
+  private var servletContext: HTTPContext = null
 
-  def this(ctx: HTTPServiceContext) = {
+  def this(ctx: HTTPContext) = {
     this()
     this.servletContext = ctx
   }
 
-  def getContext: HTTPServiceContext = servletContext
+  def getContext: HTTPContext = servletContext
 
   def destroy = {
     try {
@@ -52,10 +52,10 @@ class LiftServlet {
       Scheduler.shutdown
       ActorPing.shutdown
       LAScheduler.shutdown
-      Log.debug("Destroyed servlet")
+      Log.debug("Destroyed Lift handler.")
       // super.destroy
     } catch {
-      case e => Log.error("Servlet destruction failure",e)
+      case e => Log.error("Destruction failure",e)
     }
   }
 
@@ -122,7 +122,7 @@ class LiftServlet {
     tryo { LiftRules.onBeginServicing.toList.foreach(_(req)) }
 
     val resp =
-    // if the servlet is shutting down, return a 404
+    // if the application is shutting down, return a 404
     if (LiftRules.ending) {
       LiftRules.notFoundOrIgnore(req, Empty)
     } else if (!authPassed_?(req)) {
@@ -209,7 +209,7 @@ class LiftServlet {
 
     val wp = req.path.wholePath
 
-    if (LiftRules.enableServletSessions) req.request.session
+    if (LiftRules.enableContainerSessions) req.request.session
 
     val toTransform: Box[LiftResponse] =
     if (dispatch._1)

@@ -36,7 +36,7 @@ trait HTTPResponse {
    * 
    * @param url - the URL that needs to be analysed
    */
-  def encodeURL(url: String): String
+  def encodeUrl(url: String): String
 
   /**
    * Add a list of header parameters to the response object

@@ -3,18 +3,14 @@ package net.liftweb.http.provider.servlet
 import _root_.javax.servlet.http._
 import _root_.net.liftweb.util._
 
-class HTTPServletSession(session: HttpSession) extends HTTPServiceSession {
+class HTTPServletSession(session: HttpSession) extends HTTPSession {
   private val LiftMagicID = "$lift_magic_session_thingy$"
 
-  def sessionID: String = session getId
+  def sessionId: String = session getId
 
-  def link(liftSession: LiftSession) = {
-    session.setAttribute(LiftMagicID, SessionToServletBridge(liftSession.uniqueId))
-  }
+  def link(liftSession: LiftSession) = session.setAttribute(LiftMagicID, SessionToServletBridge(liftSession.uniqueId))
 
-  def unlink(liftSession: LiftSession) = {
-    session.removeAttribute(LiftMagicID)
-  }
+  def unlink(liftSession: LiftSession) = session.removeAttribute(LiftMagicID)
 
   def maxInactiveInterval: Long = session getMaxInactiveInterval
 
@@ -27,6 +23,8 @@ class HTTPServletSession(session: HttpSession) extends HTTPServiceSession {
   def attribute(name: String): Any = session getAttribute name
 
   def removeAttribute(name: String) = session removeAttribute name
+
+  def terminate = session invalidate
 }
 
 /**

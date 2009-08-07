@@ -22,7 +22,7 @@ import _root_.net.liftweb.util._
 /**
  * Represents the service context information. Similar with servlet context.
  */
-trait HTTPServiceContext {
+trait HTTPContext {
 
   /**
    * @return - the context path. It always comes first in a request URI. It is

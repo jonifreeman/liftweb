@@ -39,7 +39,7 @@ object LiftSession {
   /**
    * Returns a reference to a LiftSession dictated by LiftRules#sessionCreator function.
    */
-  def apply(session: HTTPServiceSession, contextPath: String) =
+  def apply(session: HTTPSession, contextPath: String) =
   LiftRules.sessionCreator(session, contextPath)
 
   /**
@@ -106,9 +106,9 @@ object SessionMaster extends Actor {
   /**
    * Returns a LiftSession or Empty if not found
    */
-  def getSession(httpSession: => HTTPServiceSession, otherId: Box[String]): Box[LiftSession] =
+  def getSession(httpSession: => HTTPSession, otherId: Box[String]): Box[LiftSession] =
   synchronized {
-    otherId.flatMap(sessions.get) or Box(sessions.get(httpSession.sessionID))
+    otherId.flatMap(sessions.get) or Box(sessions.get(httpSession.sessionId))
   }
 
   /**
@@ -116,7 +116,7 @@ object SessionMaster extends Actor {
    */
   def getSession(req: HTTPRequest, otherId: Box[String]): Box[LiftSession] =
   synchronized {
-    otherId.flatMap(sessions.get) or Box(sessions.get(req.session.sessionID))
+    otherId.flatMap(sessions.get) or Box(sessions.get(req.session.sessionId))
   }
 
   /**
@@ -222,7 +222,7 @@ object RenderVersion {
  */
 @serializable
 class LiftSession(val contextPath: String, val uniqueId: String,
-                  val httpSession: Box[HTTPServiceSession]) {
+                  val httpSession: Box[HTTPSession]) {
   import TemplateFinder._
 
   type AnyActor = {def !(in: Any): Unit}
